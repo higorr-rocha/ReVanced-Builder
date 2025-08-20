@@ -12,29 +12,31 @@ dl_apk() {
     local url=$1
     local output=$2
 
-    # 1. Get the page for the specific version
+    # 1. Get the main APK page content
     local page_content
     page_content=$(req "$url" -)
-    local download_page_path
-    download_page_path=$(echo "$page_content" | grep -oP '(?<=href=")[^"]*?download-button' | sed 's/"//' | head -n 1)
+    
+    # 2. Find the link to the specific variant and architecture page
+    local variant_page_path
+    variant_page_path=$(echo "$page_content" | grep -oP '(?<=href=")[^"]*?\.apk' | head -n 1)
 
-    if [ -z "$download_page_path" ]; then
-        echo "Error: Could not find download page URL for $output on page $url"
+    if [ -z "$variant_page_path" ]; then
+        echo "Error: Could not find variant page URL for $output on page $url"
         return 1
     fi
-    local download_page_url="https://www.apkmirror.com${download_page_path}"
-    
-    # 2. Get the final download link from the download page
+    local variant_page_url="https://www.apkmirror.com${variant_page_path}"
+
+    # 3. Get the final download link from the variant page
     local final_download_path
-    final_download_path=$(req "$download_page_url" - | grep -oP '(?<=href=")[^"]*?key=[^"]*')
+    final_download_path=$(req "$variant_page_url" - | grep -oP '(?<=href=")[^"]*?key=[^"]*&forcebaseapk=true')
 
     if [ -z "$final_download_path" ]; then
-        echo "Error: Could not find final download URL for $output on page $download_page_url"
+        echo "Error: Could not find final download URL for $output on page $variant_page_url"
         return 1
     fi
     local final_download_url="https://www.apkmirror.com${final_download_path}"
 
-    # 3. Download the file
+    # 4. Download the file
     echo "Downloading from $final_download_url"
     req "$final_download_url" "$output"
 }
@@ -60,11 +62,11 @@ download_app() {
 
     dl_apk "$base_url" "$output_apk"
 
-    if [ $? -eq 0 ]; then
+    if [ $? -eq 0 ] && [ -s "$output_apk" ]; then
         echo "$appName downloaded successfully as $output_apk"
     else
         echo "Failed to download $appName."
-        # exit 1 # You might want to exit here if a download fails
+        exit 1
     fi
 }
 

@@ -16,10 +16,10 @@ get_artifact_download_url() {
 # Download necessary tools
 declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
-# AQUI ESTÁ A CORREÇÃO: O nome do artefato estava incorreto.
 artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
-artifacts["vanced-microG.apk"]="ReVanced/GmsCore app-release .apk"
+# CORREÇÃO: O nome do artefato do GmsCore foi corrigido de "app-release" para "GmsCore"
+artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk"
 
 for artifact_filename in "${!artifacts[@]}"; do
     if [ ! -f "$artifact_filename" ]; then
