@@ -5,12 +5,13 @@
 # Download apkeep if not present, ensuring we follow redirects with -L
 if [ ! -f "apkeep" ]; then
     echo "Downloading apkeep..."
+    # A flag -L é crucial para seguir o redirecionamento do GitHub e baixar o binário real.
     curl -sL -o apkeep "https://github.com/EFForg/apkeep/releases/download/v0.4.0/apkeep-x86_64-unknown-linux-gnu"
     
-    # Verify that the downloaded file is an executable binary
+    # Adiciona uma verificação para garantir que o arquivo baixado é um executável
     if ! file apkeep | grep -q "executable"; then
-        echo "Error: Downloaded apkeep is not a valid executable."
-        cat apkeep # Print file content for debugging
+        echo "Error: O arquivo apkeep baixado não é um executável válido."
+        cat apkeep # Mostra o conteúdo do arquivo para depuração
         exit 1
     fi
     
@@ -29,35 +30,33 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         echo "Downloading $appName version $version"
         echo "************************************"
         
-        # Execute apkeep with the correct source
+        # Executa o apkeep para baixar do Google Play, que é mais confiável
         ./apkeep -a "$packageName@$version" -d "google-play" .
         
-        # apkeep saves the file with version info, so we rename it
         downloaded_file_xapk="${packageName}@${version}.xapk"
         downloaded_file_apk="${packageName}@${version}.apk"
 
         if [ -f "$downloaded_file_xapk" ]; then
-            # We only need the base apk, so we unzip and find it
             unzip -o "$downloaded_file_xapk" "$packageName.apk" -d .
-            rm "$downloaded_file_xapk" # Clean up the bundle
+            rm "$downloaded_file_xapk"
             if [ -f "$packageName.apk" ]; then
                  echo "$appName downloaded successfully as $output_apk"
             else
-                echo "Error: Could not extract base APK from $downloaded_file_xapk"
+                echo "Error: Não foi possível extrair o APK base de $downloaded_file_xapk"
                 exit 1
             fi
         elif [ -f "$downloaded_file_apk" ]; then
             mv "$downloaded_file_apk" "$output_apk"
             echo "$appName downloaded successfully as $output_apk"
         else
-            echo "Error: Failed to download $appName. Neither .xapk nor .apk was found."
+            echo "Error: Falha no download de $appName. Nenhum arquivo .xapk ou .apk foi encontrado."
             exit 1
         fi
     else
-        echo "$output_apk already exists, skipping download."
+        echo "$output_apk já existe, pulando o download."
     fi
 done
 
 echo "************************************"
-echo "All APK downloads finished."
+echo "Todos os downloads de APKs finalizados."
 echo "************************************"

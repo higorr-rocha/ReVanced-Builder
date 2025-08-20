@@ -7,7 +7,7 @@ get_artifact_download_url() {
     local extension=$3
     local api_url="https://api.github.com/repos/${repo}/releases/latest"
     
-    # Use jq to robustly parse the JSON and find the download URL, follow redirects with -L
+    # Usar -L aqui também por segurança
     curl -sL "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
 }
 
@@ -18,7 +18,7 @@ declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
 artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
-artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk" # Corrected artifact name
+artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk" # Nome do artefato corrigido
 
 for artifact_filename in "${!artifacts[@]}"; do
     if [ ! -f "$artifact_filename" ]; then
@@ -27,7 +27,7 @@ for artifact_filename in "${!artifacts[@]}"; do
         if [ -n "$url" ]; then
             curl -sLo "$artifact_filename" "$url"
         else
-            echo "Error: Could not find download URL for $artifact_filename"
+            echo "Error: Não foi possível encontrar a URL de download para $artifact_filename"
             exit 1
         fi
     fi
@@ -43,11 +43,11 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
     apk_file="${packageName}.apk"
 
     echo "************************************"
-    echo "Processing $appName"
+    echo "Processando $appName"
     echo "************************************"
 
     if [ ! -f "$apk_file" ]; then
-        echo "APK file '$apk_file' not found, skipping build for $appName."
+        echo "Arquivo APK '$apk_file' não encontrado, pulando a compilação para $appName."
         continue
     fi
 
@@ -61,7 +61,7 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
     done
 
     # Build Root APK
-    echo "Building Root APK for $appName"
+    echo "Compilando APK Root para $appName"
     java -jar revanced-cli.jar patch \
         -b revanced-patches.jar \
         -m revanced-integrations.apk \
@@ -71,7 +71,7 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         "$apk_file"
 
     # Build Non-root APK
-    echo "Building Non-root APK for $appName"
+    echo "Compilando APK Non-root para $appName"
     java -jar revanced-cli.jar patch \
         -b revanced-patches.jar \
         -m revanced-integrations.apk \
@@ -83,5 +83,5 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
 done
 
 echo "************************************"
-echo "All builds finished."
+echo "Todas as compilações foram finalizadas."
 echo "************************************"
