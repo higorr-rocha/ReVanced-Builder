@@ -1,20 +1,38 @@
 #!/usr/bin/env bash
 
-# Baixa o apkeep usando wget para maior robustez, pois o curl com a API falhou.
+# Função para obter a URL de download de um artefato de um release do GitHub
+get_github_release_asset_url() {
+    local repo=$1
+    local asset_name=$2
+    local api_url="https://api.github.com/repos/${repo}/releases/latest"
+    
+    # Usa curl para consultar a API e jq para extrair a URL de download do artefato específico
+    curl -sL "$api_url" | jq -r ".assets[] | select(.name == \"$asset_name\") | .browser_download_url"
+}
+
+# --- Main Script ---
+
+# Baixa o apkeep usando o método robusto da API
 if [ ! -f "apkeep" ]; then
     echo "Downloading apkeep..."
-    wget -q -O apkeep "https://github.com/EFForg/apkeep/releases/download/v0.4.0/apkeep-x86_64-unknown-linux-gnu"
+    APKEEP_URL=$(get_github_release_asset_url "EFForg/apkeep" "apkeep-x86_64-unknown-linux-gnu")
+    
+    if [ -z "$APKEEP_URL" ]; then
+        echo "Error: Não foi possível encontrar a URL de download para o apkeep."
+        exit 1
+    fi
+    
+    curl -sLo apkeep "$APKEEP_URL"
     
     if ! file apkeep | grep -q "executable"; then
         echo "Error: O arquivo apkeep baixado não é um executável válido."
-        cat apkeep
         exit 1
     fi
     
     chmod +x ./apkeep
 fi
 
-# Lê a configuração e baixa cada APK
+# Lê a configuração JSON e baixa cada APK
 jq -c '.[]' apps_config.json | while read -r app_config; do
     appName=$(echo "$app_config" | jq -r '.appName')
     packageName=$(echo "$app_config" | jq -r '.packageName')
@@ -26,7 +44,9 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         echo "Downloading $appName version $version"
         echo "************************************"
         
-        # CORREÇÃO CRÍTICA: Usa 'apk-mirror' como fonte para evitar a necessidade de login do Google Play
+        # ##################################################################
+        # ## CORREÇÃO DEFINITIVA: Mudar a fonte para "apk-mirror" ##
+        # ##################################################################
         ./apkeep -a "$packageName@$version" -d "apk-mirror" .
         
         downloaded_file_xapk="${packageName}@${version}.xapk"
