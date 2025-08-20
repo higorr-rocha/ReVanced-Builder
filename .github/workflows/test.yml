@@ -20,8 +20,9 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
+      # CORREÇÃO: Adicionado 'unzip' à lista de dependências
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq
+        run: sudo apt-get update && sudo apt-get install -y jq unzip
 
       - name: Download APKs
         run: ./download_apkmirror.sh
