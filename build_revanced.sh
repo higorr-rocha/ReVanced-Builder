@@ -16,7 +16,8 @@ get_artifact_download_url() {
 # Download necessary tools
 declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
-artifacts["revanced-integrations.apk"]="revanced/revanced-integrations app-release-unsigned .apk"
+# AQUI ESTÁ A CORREÇÃO: O nome do artefato estava incorreto.
+artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
 artifacts["vanced-microG.apk"]="ReVanced/GmsCore app-release .apk"
 

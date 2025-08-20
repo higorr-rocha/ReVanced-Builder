@@ -10,26 +10,32 @@ req() {
 
 dl_apk() {
     local url=$1
-    local regexp=$2
-    local output=$3
+    local output=$2
 
     # 1. Get the page for the specific version
-    local download_page_url="https://www.apkmirror.com$(req "$url" - | grep -oP 'href="([^"]+)"' | grep 'download-button' | sed 's/href="//;s/"//' | head -n 1)"
-    
-    if [ -z "$download_page_url" ]; then
-        echo "Error: Could not find download page URL for $output"
+    local page_content
+    page_content=$(req "$url" -)
+    local download_page_path
+    download_page_path=$(echo "$page_content" | grep -oP '(?<=href=")[^"]*?download-button' | sed 's/"//' | head -n 1)
+
+    if [ -z "$download_page_path" ]; then
+        echo "Error: Could not find download page URL for $output on page $url"
         return 1
     fi
+    local download_page_url="https://www.apkmirror.com${download_page_path}"
     
     # 2. Get the final download link from the download page
-    local final_download_url="https://www.apkmirror.com$(req "$download_page_url" - | grep -oP 'href="([^"]+)"' | grep 'key=' | sed 's/href="//;s/"//')"
+    local final_download_path
+    final_download_path=$(req "$download_page_url" - | grep -oP '(?<=href=")[^"]*?key=[^"]*')
 
-    if [ -z "$final_download_url" ]; then
-        echo "Error: Could not find final download URL for $output"
+    if [ -z "$final_download_path" ]; then
+        echo "Error: Could not find final download URL for $output on page $download_page_url"
         return 1
     fi
+    local final_download_url="https://www.apkmirror.com${final_download_path}"
 
     # 3. Download the file
+    echo "Downloading from $final_download_url"
     req "$final_download_url" "$output"
 }
 
@@ -41,27 +47,25 @@ download_app() {
 
     echo "Downloading $appName version $version"
     
-    local app_url_name
-    if [[ "$appName" == "YouTube" ]]; then
-        app_url_name="youtube"
-        publisher="google-inc"
-    elif [[ "$appName" == "YouTube Music" ]]; then
-        app_url_name="youtube-music"
-        publisher="google-inc"
-    elif [[ "$appName" == "Spotify" ]]; then
-        app_url_name="spotify"
+    local publisher="google-inc" # Default
+    if [[ "$appName" == "Spotify" ]]; then
         publisher="spotify-ltd"
-    else
-        app_url_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-        publisher="google-inc" # Default publisher, might need adjustment
     fi
+    
+    local app_url_name
+    app_url_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     
     local version_url_part="${version//./-}"
     local base_url="https://www.apkmirror.com/apk/${publisher}/${app_url_name}/${app_url_name}-${version_url_part}-release/"
 
-    dl_apk "$base_url" "APK</span>[^@]*@\([^#]*\)" "$output_apk"
+    dl_apk "$base_url" "$output_apk"
 
-    echo "$appName downloaded successfully as $output_apk"
+    if [ $? -eq 0 ]; then
+        echo "$appName downloaded successfully as $output_apk"
+    else
+        echo "Failed to download $appName."
+        # exit 1 # You might want to exit here if a download fails
+    fi
 }
 
 # --- Main Script ---
