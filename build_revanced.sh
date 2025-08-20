@@ -7,7 +7,8 @@ get_artifact_download_url() {
     local extension=$3
     local api_url="https://api.github.com/repos/${repo}/releases/latest"
     
-    curl -s "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
+    # Use jq to robustly parse the JSON and find the download URL, follow redirects with -L
+    curl -sL "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
 }
 
 # --- Main Script ---
@@ -15,10 +16,9 @@ get_artifact_download_url() {
 # Download necessary tools
 declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
-# CORREÇÃO: O nome correto do artefato é 'revanced-integrations', não 'app-release-unsigned'
 artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
-artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk"
+artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk" # Corrected artifact name
 
 for artifact_filename in "${!artifacts[@]}"; do
     if [ ! -f "$artifact_filename" ]; then
