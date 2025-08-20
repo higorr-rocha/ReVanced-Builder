@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 
-# Baixa o apkeep usando wget para maior robustez
+# Baixa o apkeep usando wget para maior robustez, pois o curl com a API falhou.
 if [ ! -f "apkeep" ]; then
     echo "Downloading apkeep..."
     wget -q -O apkeep "https://github.com/EFForg/apkeep/releases/download/v0.4.0/apkeep-x86_64-unknown-linux-gnu"
     
     if ! file apkeep | grep -q "executable"; then
         echo "Error: O arquivo apkeep baixado não é um executável válido."
+        cat apkeep
         exit 1
     fi
     
