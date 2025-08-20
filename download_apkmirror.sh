@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
 
+# Função para obter a URL de download de um artefato de um release do GitHub
+get_github_release_asset_url() {
+    local repo=$1
+    local asset_name=$2
+    local api_url="https://api.github.com/repos/${repo}/releases/latest"
+    
+    # Usa curl para consultar a API e jq para extrair a URL de download do artefato específico
+    curl -sL "$api_url" | jq -r ".assets[] | select(.name == \"$asset_name\") | .browser_download_url"
+}
+
 # --- Main Script ---
 
-# Download apkeep if not present, ensuring we follow redirects with -L
+# Baixa o apkeep usando o método robusto da API
 if [ ! -f "apkeep" ]; then
     echo "Downloading apkeep..."
-    # A flag -L é crucial para seguir o redirecionamento do GitHub e baixar o binário real.
-    curl -sL -o apkeep "https://github.com/EFForg/apkeep/releases/download/v0.4.0/apkeep-x86_64-unknown-linux-gnu"
+    APKEEP_URL=$(get_github_release_asset_url "EFForg/apkeep" "apkeep-x86_64-unknown-linux-gnu")
     
-    # Adiciona uma verificação para garantir que o arquivo baixado é um executável
+    if [ -z "$APKEEP_URL" ]; then
+        echo "Error: Não foi possível encontrar a URL de download para o apkeep."
+        exit 1
+    fi
+    
+    curl -sLo apkeep "$APKEEP_URL"
+    
     if ! file apkeep | grep -q "executable"; then
         echo "Error: O arquivo apkeep baixado não é um executável válido."
-        cat apkeep # Mostra o conteúdo do arquivo para depuração
         exit 1
     fi
     
     chmod +x ./apkeep
 fi
 
-# Read the JSON config and loop through each app
+# Lê a configuração JSON e baixa cada APK
 jq -c '.[]' apps_config.json | while read -r app_config; do
     appName=$(echo "$app_config" | jq -r '.appName')
     packageName=$(echo "$app_config" | jq -r '.packageName')
@@ -30,7 +44,6 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         echo "Downloading $appName version $version"
         echo "************************************"
         
-        # Executa o apkeep para baixar do Google Play, que é mais confiável
         ./apkeep -a "$packageName@$version" -d "google-play" .
         
         downloaded_file_xapk="${packageName}@${version}.xapk"
