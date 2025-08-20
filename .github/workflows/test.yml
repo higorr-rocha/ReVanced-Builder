@@ -5,31 +5,50 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v3.3.0
+        uses: actions/setup-java@v4
         with:
           java-version: "17"
-          distribution: "adopt"
+          distribution: "temurin"
 
-      - name: Download APKs from APKMirror
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Download APKs
         run: ./download_apkmirror.sh
 
       - name: Test Build APKs
         run: |
           ./build_revanced.sh
-          for filename in build/revanced-root.apk build/revanced-nonroot.apk build/revanced-music-root.apk build/revanced-music-nonroot.apk; do
-            if [ -e "$filename" ]; then
-              printf '"%s" exists\n' "$filename"
-            else
-              echo "APK build failed"
+          
+          # Dynamically check for built APKs based on apps_config.json
+          for appName in $(jq -r '.[].appName' apps_config.json); do
+            root_apk="build/${appName}-root.apk"
+            nonroot_apk="build/${appName}-nonroot.apk"
+            
+            if [ ! -e "$root_apk" ]; then
+              echo "Build failed: $root_apk not found!"
               exit 1
+            else
+              printf '"%s" exists\n' "$root_apk"
+            fi
+
+            if [ ! -e "$nonroot_apk" ]; then
+              echo "Build failed: $nonroot_apk not found!"
+              exit 1
+            else
+              printf '"%s" exists\n' "$nonroot_apk"
             fi
           done
+
+          echo "All APKs built successfully."
           rm -rf build

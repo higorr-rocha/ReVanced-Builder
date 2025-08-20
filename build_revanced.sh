@@ -2,10 +2,13 @@
 
 # Function to get artifact download URL from GitHub releases
 get_artifact_download_url() {
-    local api_url result
-    api_url="https://api.github.com/repos/$1/releases/latest"
-    result=$(curl -s "$api_url" | jq -r ".assets[] | select(.name | contains(\"$2\") and contains(\"$3\") and (contains(\".sig\") | not)) | .browser_download_url")
-    echo "$result"
+    local repo=$1
+    local name_contains=$2
+    local extension=$3
+    local api_url="https://api.github.com/repos/${repo}/releases/latest"
+    
+    # Use jq to robustly parse the JSON and find the download URL
+    curl -s "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
 }
 
 # --- Main Script ---
@@ -13,15 +16,21 @@ get_artifact_download_url() {
 # Download necessary tools
 declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
-artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
+artifacts["revanced-integrations.apk"]="revanced/revanced-integrations app-release-unsigned .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
 artifacts["vanced-microG.apk"]="ReVanced/GmsCore app-release .apk"
 
-for artifact in "${!artifacts[@]}"; do
-    if [ ! -f "$artifact" ]; then
-        echo "Downloading $artifact"
+for artifact_filename in "${!artifacts[@]}"; do
+    if [ ! -f "$artifact_filename" ]; then
+        echo "Downloading $artifact_filename"
         # shellcheck disable=SC2086
-        curl -sLo "$artifact" $(get_artifact_download_url ${artifacts[$artifact]})
+        url=$(get_artifact_download_url ${artifacts[$artifact_filename]})
+        if [ -n "$url" ]; then
+            curl -sLo "$artifact_filename" "$url"
+        else
+            echo "Error: Could not find download URL for $artifact_filename"
+            exit 1
+        fi
     fi
 done
 
@@ -44,25 +53,21 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
     fi
 
     # Prepare patch arguments
-    patches_args=()
-    excludePatches=$(echo "$app_config" | jq -r '.excludePatches[]')
-    includePatches=$(echo "$app_config" | jq -r '.includePatches[]')
-
-    for patch in $excludePatches; do
-        patches_args+=("-e $patch")
+    patches_args=""
+    for patch in $(echo "$app_config" | jq -r '.excludePatches[]'); do
+        patches_args+=" -e $patch"
+    done
+    for patch in $(echo "$app_config" | jq -r '.includePatches[]'); do
+        patches_args+=" -i $patch"
     done
 
-    for patch in $includePatches; do
-        patches_args+=("-i $patch")
-    done
-
-    # Build Root APK
+    # Build Root APK (if applicable)
     echo "Building Root APK for $appName"
     java -jar revanced-cli.jar patch \
         -b revanced-patches.jar \
         -m revanced-integrations.apk \
         --merge-integrations \
-        -e microg-support ${patches_args[@]} \
+        $patches_args \
         -o "build/${appName}-root.apk" \
         "$apk_file"
 
@@ -72,7 +77,8 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         -b revanced-patches.jar \
         -m revanced-integrations.apk \
         --merge-integrations \
-        ${patches_args[@]} \
+        -e microg-support \
+        $patches_args \
         -o "build/${appName}-nonroot.apk" \
         "$apk_file"
 done
