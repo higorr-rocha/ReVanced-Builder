@@ -1,85 +1,42 @@
 #!/usr/bin/env bash
 
-# Wget user agent
-WGET_HEADER="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0"
-
-# --- Functions ---
-req() {
-    wget -nv -O "$2" --header="$WGET_HEADER" "$1"
-}
-
-dl_apk() {
-    local url=$1
-    local output=$2
-
-    # 1. Get the main APK page content
-    local page_content
-    page_content=$(req "$url" -)
-    
-    # 2. Find the link to the specific variant and architecture page
-    local variant_page_path
-    variant_page_path=$(echo "$page_content" | grep -oP '(?<=href=")[^"]*?\.apk' | head -n 1)
-
-    if [ -z "$variant_page_path" ]; then
-        echo "Error: Could not find variant page URL for $output on page $url"
-        return 1
-    fi
-    local variant_page_url="https://www.apkmirror.com${variant_page_path}"
-
-    # 3. Get the final download link from the variant page
-    local final_download_path
-    final_download_path=$(req "$variant_page_url" - | grep -oP '(?<=href=")[^"]*?key=[^"]*&forcebaseapk=true')
-
-    if [ -z "$final_download_path" ]; then
-        echo "Error: Could not find final download URL for $output on page $variant_page_url"
-        return 1
-    fi
-    local final_download_url="https://www.apkmirror.com${final_download_path}"
-
-    # 4. Download the file
-    echo "Downloading from $final_download_url"
-    req "$final_download_url" "$output"
-}
-
-download_app() {
-    local appName=$1
-    local version=$2
-    local packageName=$3
-    local output_apk="${packageName}.apk"
-
-    echo "Downloading $appName version $version"
-    
-    local publisher="google-inc" # Default
-    if [[ "$appName" == "Spotify" ]]; then
-        publisher="spotify-ltd"
-    fi
-    
-    local app_url_name
-    app_url_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-    
-    local version_url_part="${version//./-}"
-    local base_url="https://www.apkmirror.com/apk/${publisher}/${app_url_name}/${app_url_name}-${version_url_part}-release/"
-
-    dl_apk "$base_url" "$output_apk"
-
-    if [ $? -eq 0 ] && [ -s "$output_apk" ]; then
-        echo "$appName downloaded successfully as $output_apk"
-    else
-        echo "Failed to download $appName."
-        exit 1
-    fi
-}
-
 # --- Main Script ---
+
+# Download apkeep if not present
+if [ ! -f "apkeep" ]; then
+    echo "Downloading apkeep..."
+    curl -sLo apkeep "https://github.com/EFForg/apkeep/releases/download/v0.4.0/apkeep-x86_64-unknown-linux-gnu"
+    chmod +x apkeep
+fi
+
+# Read the JSON config and loop through each app
 jq -c '.[]' apps_config.json | while read -r app_config; do
     appName=$(echo "$app_config" | jq -r '.appName')
     packageName=$(echo "$app_config" | jq -r '.packageName')
     version=$(echo "$app_config" | jq -r '.version')
-    apk_file="${packageName}.apk"
+    output_apk="${packageName}.apk"
 
-    if [ ! -f "$apk_file" ]; then
-        download_app "$appName" "$version" "$packageName"
+    if [ ! -f "$output_apk" ]; then
+        echo "************************************"
+        echo "Downloading $appName version $version"
+        echo "************************************"
+        
+        # Use apkeep to download the specific version
+        ./apkeep -a "$packageName@$version" .
+        
+        # apkeep saves the file with version info, so we rename it
+        if [ -f "${packageName}@${version}.apk" ]; then
+            mv "${packageName}@${version}.apk" "$output_apk"
+            echo "$appName downloaded successfully as $output_apk"
+        else
+            echo "Error: Failed to download $appName. The file ${packageName}@${version}.apk was not found."
+            exit 1
+        fi
     else
         echo "$apk_file already exists, skipping download."
     fi
 done
+
+echo "************************************"
+echo "All APK downloads finished."
+echo "************************************"

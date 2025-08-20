@@ -7,7 +7,6 @@ get_artifact_download_url() {
     local extension=$3
     local api_url="https://api.github.com/repos/${repo}/releases/latest"
     
-    # Use jq to robustly parse the JSON and find the download URL
     curl -s "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
 }
 
@@ -16,15 +15,14 @@ get_artifact_download_url() {
 # Download necessary tools
 declare -A artifacts
 artifacts["revanced-cli.jar"]="revanced/revanced-cli revanced-cli .jar"
+# CORREÇÃO: O nome correto do artefato é 'revanced-integrations', não 'app-release-unsigned'
 artifacts["revanced-integrations.apk"]="revanced/revanced-integrations revanced-integrations .apk"
 artifacts["revanced-patches.jar"]="revanced/revanced-patches revanced-patches .jar"
-# CORREÇÃO: O nome do artefato do GmsCore foi corrigido de "app-release" para "GmsCore"
 artifacts["vanced-microG.apk"]="ReVanced/GmsCore GmsCore .apk"
 
 for artifact_filename in "${!artifacts[@]}"; do
     if [ ! -f "$artifact_filename" ]; then
         echo "Downloading $artifact_filename"
-        # shellcheck disable=SC2086
         url=$(get_artifact_download_url ${artifacts[$artifact_filename]})
         if [ -n "$url" ]; then
             curl -sLo "$artifact_filename" "$url"
@@ -62,7 +60,7 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         patches_args+=" -i $patch"
     done
 
-    # Build Root APK (if applicable)
+    # Build Root APK
     echo "Building Root APK for $appName"
     java -jar revanced-cli.jar patch \
         -b revanced-patches.jar \
