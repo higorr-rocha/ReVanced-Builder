@@ -7,7 +7,6 @@ get_artifact_download_url() {
     local extension=$3
     local api_url="https://api.github.com/repos/${repo}/releases/latest"
     
-    # Adicionada a flag -L para segurança
     curl -sL "$api_url" | jq -r ".assets[] | select(.name | contains(\"$name_contains\") and endswith(\"$extension\")) | .browser_download_url" | head -n 1
 }
 
@@ -25,7 +24,6 @@ for artifact_filename in "${!artifacts[@]}"; do
         echo "Downloading $artifact_filename"
         url=$(get_artifact_download_url ${artifacts[$artifact_filename]})
         if [ -n "$url" ]; then
-            # Adicionada a flag -L para segurança
             curl -sLo "$artifact_filename" "$url"
         else
             echo "Error: Não foi possível encontrar a URL de download para $artifact_filename"
