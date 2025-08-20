@@ -45,9 +45,9 @@ jq -c '.[]' apps_config.json | while read -r app_config; do
         echo "************************************"
         
         # ##################################################################
-        # ## CORREÇÃO DEFINITIVA: Mudar a fonte para "apk-mirror" ##
+        # ## CORREÇÃO DEFINITIVA: Usar "apk-pure" como fonte de download  ##
         # ##################################################################
-        ./apkeep -a "$packageName@$version" -d "apk-mirror" .
+        ./apkeep -a "$packageName@$version" -d "apk-pure" .
         
         downloaded_file_xapk="${packageName}@${version}.xapk"
         downloaded_file_apk="${packageName}@${version}.apk"
