@@ -1,0 +1,56 @@
+[
+  {
+    "appName": "YouTube",
+    "packageName": "com.google.android.youtube",
+    "version": "19.23.35",
+    "excludePatches": [
+      "materialyou"
+    ],
+    "includePatches": [
+      "swipe-controls",
+      "downloads",
+      "seekbar-tapping",
+      "disable-create-button",
+      "return-youtube-dislike",
+      "premium-heading",
+      "old-quality-layout",
+      "hide-watermark",
+      "sponsorblock",
+      "minimized-playback",
+      "client-spoof",
+      "custom-video-buffer",
+      "microg-support",
+      "settings",
+      "custom-playback-speed",
+      "hdr-auto-brightness",
+      "remember-video-quality",
+      "video-ads",
+      "general-ads",
+      "hide-infocard-suggestions"
+    ]
+  },
+  {
+    "appName": "YouTube Music",
+    "packageName": "com.google.android.apps.youtube.music",
+    "version": "7.04.51",
+    "excludePatches": [],
+    "includePatches": [
+        "minimized-playback",
+        "video-ads",
+        "background-play",
+        "exclusive-audio-playback",
+        "upgrade-button-remover"
+    ]
+  },
+  {
+    "appName": "Spotify",
+    "packageName": "com.spotify.music",
+    "version": "8.9.2.169",
+    "excludePatches": [],
+    "includePatches": [
+      "premium",
+      "hide-podcasts",
+      "hide-audiobooks"
+    ]
+  }
+]
